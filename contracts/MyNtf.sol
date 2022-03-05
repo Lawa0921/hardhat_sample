@@ -17,6 +17,18 @@ contract MyNFT is ERC721, Ownable {                 // 這行表示 contract 同
     _tokenURIs[tokenId] = _tokenURI;
   }
 
+  function tokenURI(uint256 tokenId)
+    public
+    view
+    virtual
+    override
+    returns (string memory)
+  {
+    require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+    string memory _tokenURI = _tokenURIs[tokenId];
+    return _tokenURI;
+  }
+
   function mint(address recipient, string memory uri)
     public
     returns (uint256)
