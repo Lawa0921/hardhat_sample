@@ -1,4 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
+require('dotenv').config()
+
+const defaultNetwork = 'localhost'
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -18,4 +21,18 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
  */
 module.exports = {
   solidity: "0.8.12",
+  defaultNetwork,
+  networks: {
+    localhost: {
+      url: 'http://localhost:8545',
+      gas: 2100000,
+      gasPrice: 8000000000,
+    },
+    hardhat: {
+    },
+    rinkeby: {
+      url: `https://rinkeby.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+      accounts: [process.env.ACCOUNT_PRIVATE_KEY]
+    }
+  }
 };
