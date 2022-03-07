@@ -1,42 +1,139 @@
-//SPDX-License-Identifier: Unlicense
+// Contract based on https://docs.openzeppelin.com/contracts/3.x/erc721
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-contract MyNFT is ERC721, Ownable {                 // 這行表示 contract 同時繼承於 ERC721URIStorage 與 Ownable
-  using Counters for Counters.Counter;              // 這行表示將 Counters 的各種 function 掛載到 Counters.Counter 這個物件身上，理解上有點像 ruby 的 include
-  using Strings for uint256;                        // 這行表示將 Strings 的各種 function 掛載到 uint256 上
-  Counters.Counter private _tokenIds;               // 這行表示將 _tokenIds 這個 private 變數設為 Counters.Counter 的 struct，基本上就是一般的宣告變數，只是將它宣告成 Counters.Counter
-  mapping (uint256 => string) private _tokenURIs;   // 這行表示將 _tokenURIs 這個 private 變數定義為 mapping (uint256 => string) 的資料格式
+import "@openzeppelin/contracts/utils/Strings.sol";
 
-  constructor() ERC721("MyNFT", "MNFT") {}          // 這行表示在部署時給 ERC721 的 contract constructor 帶入參數
-  function _setTokenURI(uint256 tokenId, string memory _tokenURI)
-    internal
-    virtual
-  {
-    _tokenURIs[tokenId] = _tokenURI;
-  }
+contract NicMeta is ERC721Enumerable, Ownable {
+    using Strings for uint256;
 
-  function tokenURI(uint256 tokenId)
-    public
-    view
-    virtual
-    override
-    returns (string memory)
-  {
-    require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
-    string memory _tokenURI = _tokenURIs[tokenId];
-    return _tokenURI;
-  }
+    bool public _isSaleActive = false;
+    bool public _revealed = false;
 
-  function mint(address recipient, string memory uri)
-    public
-    returns (uint256)
-  {
-    _tokenIds.increment();
-    uint256 newItemId = _tokenIds.current();
-    _mint(recipient, newItemId);
-    _setTokenURI(newItemId, uri);
-    return newItemId;
-  }
+    // Constants
+    uint256 public constant MAX_SUPPLY = 100;
+    uint256 public mintPrice = 0.03 ether;
+    uint256 public maxBalance = 10;
+    uint256 public maxMint = 10;
+
+    string baseURI;
+    string public notRevealedUri;
+    string public baseExtension = ".json";
+
+    mapping(uint256 => string) private _tokenURIs;
+
+    constructor(string memory initBaseURI, string memory initNotRevealedUri)
+        ERC721("Nic Meta", "NM")
+    {
+        setBaseURI(initBaseURI);
+        setNotRevealedURI(initNotRevealedUri);
+    }
+
+    function mint(uint256 tokenQuantity) public payable {
+        require(
+            totalSupply() + tokenQuantity <= MAX_SUPPLY,
+            "Sale would exceed max supply"
+        );
+        require(_isSaleActive, "Sale must be active to mint");
+        require(
+            balanceOf(msg.sender) + tokenQuantity <= maxBalance,
+            "Sale would exceed max balance"
+        );
+        require(
+            tokenQuantity * mintPrice <= msg.value,
+            "Not enough ether sent"
+        );
+        require(tokenQuantity <= maxMint, "Can only mint 1 tokens at a time");
+
+        _mint(tokenQuantity);
+    }
+
+    function _mint(uint256 tokenQuantity) internal {
+        for (uint256 i = 0; i < tokenQuantity; i++) {
+            uint256 mintIndex = totalSupply();
+            if (totalSupply() < MAX_SUPPLY) {
+                _safeMint(msg.sender, mintIndex);
+            }
+        }
+    }
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        virtual
+        override
+        returns (string memory)
+    {
+        require(
+            _exists(tokenId),
+            "ERC721Metadata: URI query for nonexistent token"
+        );
+
+        if (_revealed == false) {
+            return notRevealedUri;
+        }
+
+        string memory _tokenURI = _tokenURIs[tokenId];
+        string memory base = _baseURI();
+
+        // If there is no base URI, return the token URI.
+        if (bytes(base).length == 0) {
+            return _tokenURI;
+        }
+        // If both are set, concatenate the baseURI and tokenURI (via abi.encodePacked).
+        if (bytes(_tokenURI).length > 0) {
+            return string(abi.encodePacked(base, _tokenURI));
+        }
+        // If there is a baseURI but no tokenURI, concatenate the tokenID to the baseURI.
+        return
+            string(abi.encodePacked(base, tokenId.toString(), baseExtension));
+    }
+
+    // internal
+    function _baseURI() internal view virtual override returns (string memory) {
+        return baseURI;
+    }
+
+    //only owner
+    function flipSaleActive() public onlyOwner {
+        _isSaleActive = !_isSaleActive;
+    }
+
+    function flipReveal() public onlyOwner {
+        _revealed = !_revealed;
+    }
+
+    function setMintPrice(uint256 _mintPrice) public onlyOwner {
+        mintPrice = _mintPrice;
+    }
+
+    function setNotRevealedURI(string memory _notRevealedURI) public onlyOwner {
+        notRevealedUri = _notRevealedURI;
+    }
+
+    function setBaseURI(string memory _newBaseURI) public onlyOwner {
+        baseURI = _newBaseURI;
+    }
+
+    function setBaseExtension(string memory _newBaseExtension)
+        public
+        onlyOwner
+    {
+        baseExtension = _newBaseExtension;
+    }
+
+    function setMaxBalance(uint256 _maxBalance) public onlyOwner {
+        maxBalance = _maxBalance;
+    }
+
+    function setMaxMint(uint256 _maxMint) public onlyOwner {
+        maxMint = _maxMint;
+    }
+
+    function withdraw(address to) public onlyOwner {
+        uint256 balance = address(this).balance;
+        payable(to).transfer(balance);
+    }
 }
