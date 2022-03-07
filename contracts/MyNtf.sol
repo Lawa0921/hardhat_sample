@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-contract NicMeta is ERC721Enumerable, Ownable {
+contract MyNft is ERC721Enumerable, Ownable {
     using Strings for uint256;
 
     bool public _isSaleActive = false;
@@ -25,7 +25,7 @@ contract NicMeta is ERC721Enumerable, Ownable {
     mapping(uint256 => string) private _tokenURIs;
 
     constructor(string memory initBaseURI, string memory initNotRevealedUri)
-        ERC721("Nic Meta", "NM")
+        ERC721("MyNft", "MN")
     {
         setBaseURI(initBaseURI);
         setNotRevealedURI(initNotRevealedUri);
