@@ -24,12 +24,7 @@ contract MyNFT is ERC721Enumerable, Ownable {
 
     mapping(uint256 => string) private _tokenURIs;
 
-    constructor(string memory initBaseURI, string memory initNotRevealedUri)
-        ERC721("MyNFT", "MN")
-    {
-        setBaseURI(initBaseURI);
-        setNotRevealedURI(initNotRevealedUri);
-    }
+    constructor() ERC721("MyNFT", "MN") {}
 
     function mint(uint256 tokenQuantity) public payable {
         require(
